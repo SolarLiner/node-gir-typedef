@@ -1,6 +1,6 @@
 import { parseXml, Element } from "libxmljs";
-import { isNameValid, indent } from './utils';
-import './extensions';
+import { isNameValid, indent } from "./utils";
+import "./extensions";
 
 const GIR_PATHS = ["/usr/share/gir-1.0/*.gir", "/usr/share/*/gir-1.0/*.gir"];
 const XMLNS = "http://www.gtk.org/introspection/core/1.0";
@@ -148,7 +148,7 @@ function getParameters(element: Element) {
 }
 /**
  * Returns the return type of the object
- * 
+ *
  * @param {Element} element XML Element rpresenting the object
  * @returns {ReturnType} Return type of the object
  */
@@ -174,14 +174,14 @@ function getReturnType(element: Element): ReturnType {
 
 /**
  * Builds a type definition representation of a function
- * 
+ *
  * @param {string} name Name of the function
  * @param {Parameter[]} args Arguments composing the function
  * @param {ReturnType} returntype Type of the returned value. `null` or `void` if none.
  * @param {number} depth Indentation depth
  * @param {string} [docstring] Function documentation
  * @param {string[]} [extraTags] Extra tags to pass to the function declaration
- * @returns 
+ * @returns
  */
 function buildFunctionString(
   name: string,
@@ -201,62 +201,70 @@ function buildFunctionString(
   if (options.documentation) {
     let paramDoc = args.map(arg => ` * @param {${arg.type}} ${arg.doc}`);
     paramDoc.push(` * @returns {${returntype.type}} ${returntype.doc}`);
-    let content = docstring.split('\n').map(line => ` * ${line}`);
+    let content = docstring.split("\n").map(line => ` * ${line}`);
     content.unshift("/**");
     content.push(...paramDoc, " */");
     content.push(`${name}(${arglist}): ${returntype};`);
     content = indent(content, depth);
 
-    return content.join('\n');
+    return content.join("\n");
   }
-  if(extraTags)
-    return `${extraTags.join(' ')} ${name}(${arglist}): ${returntype.type}`;
-  else
-    return `${name}(${arglist}): ${returntype.type}`;
+  if (extraTags)
+    return `${extraTags.join(" ")} ${name}(${arglist}): ${returntype.type}`;
+  else return `${name}(${arglist}): ${returntype.type}`;
 }
 /**
  * Builds a type definition string of an enum.
- * 
- * @param {Element} element 
+ *
+ * @param {Element} element
  * @returns {string} String representation of the enum
  */
-function buildEnumString(element: Element): string {
-  let enumName = element.attr('name').value();
+function extractEnum(element: Element): GIRClass {
+  let enumName = element.attr("name").value();
   let docstring = getDocstring(element);
-  let enumContent = docstring.split('\n').map(line => ` * ${line}`);
-  enumContent.unshift('/**');
-  enumContent.push(' */');
+  let enumContent = docstring.split("\n").map(line => ` * ${line}`);
+  enumContent.unshift("/**");
+  enumContent.push(" */");
   enumContent.push(`export enum ${enumName} {`);
 
   let members = element.find(`{${XMLNS}}member`);
-  for(let member of members) {
-    enumName = member.attr('name').value();
-    if(enumName.length == 0 || enumName[0].match('[0-9]'))
-      enumName = '_' + enumName;
-    
-    let enumValue = member.attr('value').value().replace('\\', '\\\\');
-    enumContent.push(`    ${enumName.toUpperCase()} = '${enumValue}'`);    
-  }
-  enumContent.push('}');
+  for (let member of members) {
+    enumName = member.attr("name").value();
+    if (enumName.length == 0 || enumName[0].match("[0-9]"))
+      enumName = "_" + enumName;
 
-  return enumContent.join('\n');
+    let enumValue = member
+      .attr("value")
+      .value()
+      .replace("\\", "\\\\");
+    enumContent.push(`    ${enumName.toUpperCase()} = '${enumValue}'`);
+  }
+  enumContent.push("}");
+
+  return {
+    name: enumName,
+    parents: null,
+    contents: enumContent.join("\n")
+  };
 }
 /**
  * Extract methods from class
- * 
+ *
  * @param {Element} classTag XML element representing the class.
  * @returns {string[]} String type definition representation of the methods.
  */
 function extractMethods(classTag: Element): string[] {
   let methodsContent = new Array<string>();
-  for(let node of classTag.childNodes()) {
-    if(['method', 'virtual-method'].indexOf(node.name()) != -1) {
-      let methodName = node.attr('name').value();
+  for (let node of classTag.childNodes()) {
+    if (["method", "virtual-method"].contains(node.name())) {
+      let methodName = node.attr("name").value();
       let docstring = getDocstring(node);
       let params = getParameters(node);
       let returntype = getReturnType(node);
 
-      methodsContent.push(buildFunctionString(methodName, params, returntype, 1, docstring));
+      methodsContent.push(
+        buildFunctionString(methodName, params, returntype, 1, docstring)
+      );
     }
   }
 
@@ -265,16 +273,16 @@ function extractMethods(classTag: Element): string[] {
 
 /**
  * Builds type definition string representation of class constructor(s).
- * 
+ *
  * @param {Element} classTag XML Element representing the class
  * @returns {string[]} String representation of the constructors.
  */
 function extractConstructors(classTag: Element): string[] {
-  let className = classTag.attr('name').value();
+  let className = classTag.attr("name").value();
   let methodsContent = new Array<string>();
-  for(let node of classTag.childNodes()) {
-    if(node.name() == "constructor") {
-      let methodName = node.attr('name').value();
+  for (let node of classTag.childNodes()) {
+    if (node.name() == "constructor") {
+      let methodName = node.attr("name").value();
       let docstring = getDocstring(node);
       let params = getParameters(node);
       let returnType: ReturnType = {
@@ -282,12 +290,18 @@ function extractConstructors(classTag: Element): string[] {
         type: methodName
       };
 
-      if(methodName = "new") {
-        methodsContent.push(buildFunctionString("constructor", params, returnType, 1, docstring));
+      if ((methodName = "new")) {
+        methodsContent.push(
+          buildFunctionString("constructor", params, returnType, 1, docstring)
+        );
       }
 
       // Also include a static function that does the same thing as the class constructor
-      methodsContent.push(buildFunctionString(methodName, params, returnType, 1, docstring, ['static']));
+      methodsContent.push(
+        buildFunctionString(methodName, params, returnType, 1, docstring, [
+          "static"
+        ])
+      );
     }
   }
 
@@ -296,11 +310,11 @@ function extractConstructors(classTag: Element): string[] {
 
 /**
  * Builds classes, sort them by hyerarchy and returns necessary imports
- * 
+ *
  * @param {GIRClass[]} classes List of classes to build.
  * @returns {[string, Set<string>]} String representation of the class and list of imports
  */
-function buildClass(classes: GIRClass[]): [string, Set<string>] {
+function buildClasses(classes: GIRClass[]): [string, Set<string>] {
   let classesText = "";
   let imports = new Set<string>();
   let parents = new Array<string>();
@@ -308,60 +322,62 @@ function buildClass(classes: GIRClass[]): [string, Set<string>] {
   let writtenClasses = new Set<string>();
   let allClasses = new Set(classes.map(klass => klass.name));
 
-  for(let classInfo of classes) {
+  for (let classInfo of classes) {
     parents = classInfo.parents;
-    localParents = localParents.union(new Set(parents.filter(classParent => {
-      return !classParent.includes('.');
-    })));
+    localParents = localParents.union(
+      new Set(
+        parents.filter(classParent => {
+          return !classParent.includes(".");
+        })
+      )
+    );
   }
 
-  while(writtenClasses !== allClasses) {
-    for(let klass of classes) {
+  while (writtenClasses !== allClasses) {
+    for (let klass of classes) {
       let skip = false;
-      for(let parent of parents) {
-        if(!parent.includes('.') && !writtenClasses.has(parent)) {
+      for (let parent of parents) {
+        if (!parent.includes(".") && !writtenClasses.has(parent)) {
           skip = true;
         }
-        if(writtenClasses.has(klass.name)) {
+        if (writtenClasses.has(klass.name)) {
           skip = true;
         }
-        if(skip) continue;
+        if (skip) continue;
 
         classesText += klass.contents;
         writtenClasses.add(klass.name);
-        for(let parentClass of parents) {
-          if(parentClass.includes('.'))
-            imports.add(parentClass.substring(0, parentClass.indexOf('.')));
+        for (let parentClass of parents) {
+          if (parentClass.includes("."))
+            imports.add(parentClass.substring(0, parentClass.indexOf(".")));
         }
       }
     }
   }
 
-  return [classesText, imports]
+  return [classesText, imports];
 }
 /**
  * Builds a representation of the class from the associated XML element.
- * 
+ *
  * @param {Element} element XML Element representing the class
  * @returns {GIRClass} Object representing the class, including it's type definition.
  */
 function extractClass(element: Element): GIRClass {
-  let className = element.attr('name').value();
+  let className = element.attr("name").value();
   let docstring = getDocstring(element);
   let parents = new Array<string>();
-  let parentAttr = element.attrs().find((value) => value.name() == "parent");
-  if(parentAttr)
-    parents.push(parentAttr.value());
+  let parentAttr = element.attrs().find(value => value.name() == "parent");
+  if (parentAttr) parents.push(parentAttr.value());
 
   let implementsArg = element.find(`{${XMLNS}}implements`);
-  for(let impl of implementsArg)
-    parents.push(impl.attr('name').value());
+  for (let impl of implementsArg) parents.push(impl.attr("name").value());
 
   let classContent = [`export class ${className} {`];
-  let docstringLines = docstring.split('\n');
+  let docstringLines = docstring.split("\n");
   docstringLines.forEach(value => ` * ${value}`);
-  docstringLines.unshift('/**');
-  docstringLines.push(' */');
+  docstringLines.unshift("/**");
+  docstringLines.push(" */");
 
   classContent.unshift(...docstringLines);
   classContent.push(...indent(extractConstructors(element), 1));
@@ -370,7 +386,7 @@ function extractClass(element: Element): GIRClass {
   return {
     name: className,
     parents: parents,
-    contents: classContent.join('\n') + '\n'
+    contents: classContent.join("\n") + "\n"
   };
 }
 
