@@ -1,6 +1,7 @@
-import { parseXml, Element } from "libxmljs";
+import { parseXml, Element, parseXmlString } from "libxmljs";
 import { isNameValid, indent } from "./utils";
 import "./extensions";
+import { readFile } from "./utils";
 
 const GIR_PATHS = ["/usr/share/gir-1.0/*.gir", "/usr/share/*/gir-1.0/*.gir"];
 const XMLNS = "http://www.gtk.org/introspection/core/1.0";
@@ -436,4 +437,14 @@ function extractNamespace(nspace: Element): string {
   }
   namespaceContent.unshift(...importsContent);
   return namespaceContent.join('\n');
+}
+
+async function parseGIR(girPath: string) {
+  console.log(`Parsing ${girPath}...`);
+  
+  let contents = await readFile(girPath);
+
+  let root = parseXmlString(contents);
+  let nspace = root.find(`{${XMLNS}}namespace`)[0];
+  return extractNamespace(nspace);
 }
