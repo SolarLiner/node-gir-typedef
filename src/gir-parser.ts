@@ -165,7 +165,7 @@ function getReturnType(element: Element): ReturnType {
  * 
  * @param {string} name Name of the function
  * @param {Parameter[]} args Arguments composing the function
- * @param {string} returntype Type of the returned value. `null` or `void` if none.
+ * @param {ReturnType} returntype Type of the returned value. `null` or `void` if none.
  * @param {number} depth Indentation depth
  * @param {string} [docstring] Function documentation
  * @returns 
@@ -173,7 +173,7 @@ function getReturnType(element: Element): ReturnType {
 function buildFunctionString(
   name: string,
   args: Parameter[],
-  returntype: string,
+  returntype: ReturnType,
   depth: number,
   docstring?: string
 ) {
@@ -181,11 +181,12 @@ function buildFunctionString(
     name = "_" + name;
   }
   let arglist = args.map(arg => `${arg.name}: ${arg.type}`).join(", ");
-  if (returntype == "null") {
-    returntype = "void";
+  if (returntype.type == "null") {
+    returntype.type = "void";
   }
   if (options.documentation) {
     let paramDoc = args.map(arg => ` * @param {${arg.type}} ${arg.doc}`);
+    paramDoc.push(` * @returns {${returntype.type}} ${returntype.doc}`);
     let content = docstring.split('\n').map(line => ` * ${line}`);
     content.unshift("/**");
     content.push(...paramDoc, " */");
@@ -195,7 +196,7 @@ function buildFunctionString(
     return content.join('\n');
   }
 
-  return `${name}(${arglist}): ${returntype}`;
+  return `${name}(${arglist}): ${returntype.type}`;
 }
 
 function buildEnumString(element: Element) {
