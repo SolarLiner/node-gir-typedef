@@ -1,3 +1,5 @@
+import { readFileSync } from "fs";
+
 export function isNameValid(word: string): boolean {
     try {
         eval(`let ${word} = 1`);
@@ -17,4 +19,15 @@ export function isNameValid(word: string): boolean {
  */
 export function indent(lines: string[], depth: number) {
     return lines.map(value => Array(depth).join('    '));
+}
+
+export function readFile(path: string): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+        try {
+            let contents = readFileSync(path).toString();
+            resolve(contents);
+        } catch (error) {
+            reject(error);
+        }
+    });
 }
