@@ -205,7 +205,7 @@ function buildFunctionString(
   if(extraTags)
     return `${extraTags.join(' ')} ${name}(${arglist}): ${returntype.type}`;
   else
-  return `${name}(${arglist}): ${returntype.type}`;
+    return `${name}(${arglist}): ${returntype.type}`;
 }
 /**
  * Builds a type definition string of an enum.
@@ -233,4 +233,25 @@ function buildEnumString(element: Element): string {
   enumContent.push('}');
 
   return enumContent.join('\n');
+}
+/**
+ * Extract methods from class
+ * 
+ * @param {Element} classTag XML element representing the class.
+ * @returns {string} String type definition representation of the methods.
+ */
+function extractMethods(classTag: Element): string {
+  let methodsContent = "";
+  for(let node of classTag.childNodes()) {
+    if(['method', 'virtual-method'].indexOf(node.name()) != -1) {
+      let methodName = node.attr('name').value();
+      let docstring = getDocstring(node);
+      let params = getParameters(node);
+      let returntype = getReturnType(node);
+
+      methodsContent += buildFunctionString(methodName, params, returntype, 1, docstring) + '\n';
+    }
+  }
+
+  return methodsContent;
 }
