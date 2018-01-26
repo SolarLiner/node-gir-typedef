@@ -241,7 +241,7 @@ function buildEnumString(element: Element): string {
  * @returns {string} String type definition representation of the methods.
  */
 function extractMethods(classTag: Element): string {
-  let methodsContent = "";
+  let methodsContent = new Array<string>();
   for(let node of classTag.childNodes()) {
     if(['method', 'virtual-method'].indexOf(node.name()) != -1) {
       let methodName = node.attr('name').value();
@@ -249,7 +249,7 @@ function extractMethods(classTag: Element): string {
       let params = getParameters(node);
       let returntype = getReturnType(node);
 
-      methodsContent += buildFunctionString(methodName, params, returntype, 1, docstring) + '\n';
+      methodsContent.push(buildFunctionString(methodName, params, returntype, 1, docstring));
     }
   }
 
