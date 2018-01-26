@@ -7,6 +7,9 @@
     },
     "compileOnSave": true,
     "compilerOptions": {
-        "outDir": "./out/"
+        "outDir": "./out/",
+        "lib": [
+            "es6"
+        ]
     }
 }
