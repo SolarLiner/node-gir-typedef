@@ -253,5 +253,36 @@ function extractMethods(classTag: Element): string {
     }
   }
 
-  return methodsContent;
+  return methodsContent.join('\n') + '\n';
+}
+
+/**
+ * Builds type definition string representation of class constructor(s).
+ * 
+ * @param {Element} classTag XML Element representing the class
+ * @returns {string} String representation of the constructors.
+ */
+function extractConstructors(classTag: Element): string {
+  let className = classTag.attr('name').value();
+  let methodsContent = new Array<string>();
+  for(let node of classTag.childNodes()) {
+    if(node.name() == "constructor") {
+      let methodName = node.attr('name').value();
+      let docstring = getDocstring(node);
+      let params = getParameters(node);
+      let returnType: ReturnType = {
+        doc: `Instance of ${methodName}.`,
+        type: methodName
+      };
+
+      if(methodName = "new") {
+        methodsContent.push(buildFunctionString("constructor", params, returnType, 1, docstring));
+      }
+
+      // Also include a static function that does the same thing as the class constructor
+      methodsContent.push(buildFunctionString(methodName, params, returnType, 1, docstring, ['static']));
+    }
+  }
+
+  return methodsContent.join('\n') + '\n';
 }
