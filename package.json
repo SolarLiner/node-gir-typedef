@@ -1,0 +1,28 @@
+{
+  "name": "gir-ts",
+  "version": "0.0.1",
+  "description": "Generate TypeScript definition files from GIR",
+  "main": "./out/index.js",
+  "dependencies": {
+    "glob": "^7.1.2",
+    "libxmljs": "^0.18.7"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.1.2",
+    "@types/node": "^9.3.0",
+    "chai": "^4.1.2",
+    "mocha": "^5.0.0",
+    "tslint": "^5.9.1",
+    "typescript": "^2.6.2"
+  },
+  "scripts": {
+    "test": "mocha"
+  },
+  "keywords": [
+    "gtk",
+    "gir",
+    "typescript"
+  ],
+  "author": "SolarLiner",
+  "license": "MIT"
+}

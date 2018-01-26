@@ -1,0 +1,12 @@
+{
+    "include": [
+        "./src/**/*.ts"
+    ],
+    "typeAcquisition": {
+        "enable": true
+    },
+    "compileOnSave": true,
+    "compilerOptions": {
+        "outDir": "./out/"
+    }
+}
