@@ -139,7 +139,12 @@ function getParameters(element: Element) {
 
   return params;
 }
-
+/**
+ * Returns the return type of the object
+ * 
+ * @param {Element} element XML Element rpresenting the object
+ * @returns {ReturnType} Return type of the object
+ */
 function getReturnType(element: Element): ReturnType {
   for (let node of element.childNodes()) {
     if (node.name() == "return-value") {
