@@ -1,5 +1,6 @@
 import { parseXml, Element } from "libxmljs";
 import { isNameValid, indent } from './utils';
+import './extensions';
 
 const GIR_PATHS = ["/usr/share/gir-1.0/*.gir", "/usr/share/*/gir-1.0/*.gir"];
 const XMLNS = "http://www.gtk.org/introspection/core/1.0";
@@ -35,6 +36,12 @@ interface Parameter {
 interface ReturnType {
   doc: string;
   type: string;
+}
+
+interface GIRClass {
+  name: string;
+  parents: string[];
+  contents: string;
 }
 
 export var options = {
@@ -285,4 +292,50 @@ function extractConstructors(classTag: Element): string {
   }
 
   return methodsContent.join('\n') + '\n';
+}
+
+/**
+ * Builds classes, sort them by hyerarchy and returns necessary imports
+ * 
+ * @param {GIRClass[]} classes List of classes to build.
+ * @returns {[string, Set<string>]} String representation of the class and list of imports
+ */
+function buildClass(classes: GIRClass[]): [string, Set<string>] {
+  let classesText = "";
+  let imports = new Set<string>();
+  let parents = new Array<string>();
+  let localParents = new Set<string>();
+  let writtenClasses = new Set<string>();
+  let allClasses = new Set(classes.map(klass => klass.name));
+
+  for(let classInfo of classes) {
+    parents = classInfo.parents;
+    localParents = localParents.union(new Set(parents.filter(classParent => {
+      return !classParent.includes('.');
+    })));
+  }
+
+  while(writtenClasses !== allClasses) {
+    for(let klass of classes) {
+      let skip = false;
+      for(let parent of parents) {
+        if(!parent.includes('.') && !writtenClasses.has(parent)) {
+          skip = true;
+        }
+        if(writtenClasses.has(klass.name)) {
+          skip = true;
+        }
+        if(skip) continue;
+
+        classesText += klass.contents;
+        writtenClasses.add(klass.name);
+        for(let parentClass of parents) {
+          if(parentClass.includes('.'))
+            imports.add(parentClass.substring(0, parentClass.indexOf('.')));
+        }
+      }
+    }
+  }
+
+  return [classesText, imports]
 }
