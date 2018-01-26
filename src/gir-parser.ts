@@ -390,11 +390,45 @@ function extractClass(element: Element): GIRClass {
   };
 }
 
-function extractNamespace(nspace: Element) {
-  let namespaceContent = "";
-  let classes = new Array<any>();
+function extractNamespace(nspace: Element): string[] {
+  let namespaceContent = new Array<string>();
+  let classes = new Array<GIRClass>();
 
-  for(let element of nspace.childNodes()) {
+  for (let element of nspace.childNodes()) {
     let name = element.name();
+    if (["class", "interface"].contains(name))
+      classes.push(extractClass(element));
+    else if (["enumeration", "bitfield"].contains(name))
+      classes.push(extractEnum(element));
+    else if (name == "function") {
+      let funcName = element.attr("name").value();
+      let docstring = getDocstring(element);
+      let params = getParameters(element);
+      let returnType = getReturnType(element);
+      let nspaceContent = buildFunctionString(
+        funcName,
+        params,
+        returnType,
+        0,
+        docstring
+      );
+      namespaceContent.push(nspaceContent);
+    } else if (name == "constant") {
+      let constantName = element.attr("name").value();
+      if (constantName[0].match("[0-9]")) constantName = "_" + constantName;
+      let constantValAttr = element.attrs().find(val => val.name() == "value");
+      let constantValue = constantValAttr ? constantValAttr.value() : "null";
+      constantValue.replace("\\", "\\\\");
+      namespaceContent.push(`${constantName} = ${constantValue};`);
+    }
   }
+  let classesContent = buildClasses(classes);
+  namespaceContent.push(...classesContent[0].split('\n'));
+
+  let importsContent = new Array<string>();
+  for(let imprt in classesContent[1]) {
+    importsContent.push(`let ${imprt} = load('${imprt}', '3.0');`);
+  }
+  namespaceContent.unshift(...importsContent);
+  return namespaceContent;
 }
