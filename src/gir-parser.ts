@@ -245,9 +245,9 @@ function buildEnumString(element: Element): string {
  * Extract methods from class
  * 
  * @param {Element} classTag XML element representing the class.
- * @returns {string} String type definition representation of the methods.
+ * @returns {string[]} String type definition representation of the methods.
  */
-function extractMethods(classTag: Element): string {
+function extractMethods(classTag: Element): string[] {
   let methodsContent = new Array<string>();
   for(let node of classTag.childNodes()) {
     if(['method', 'virtual-method'].indexOf(node.name()) != -1) {
@@ -260,16 +260,16 @@ function extractMethods(classTag: Element): string {
     }
   }
 
-  return methodsContent.join('\n') + '\n';
+  return methodsContent;
 }
 
 /**
  * Builds type definition string representation of class constructor(s).
  * 
  * @param {Element} classTag XML Element representing the class
- * @returns {string} String representation of the constructors.
+ * @returns {string[]} String representation of the constructors.
  */
-function extractConstructors(classTag: Element): string {
+function extractConstructors(classTag: Element): string[] {
   let className = classTag.attr('name').value();
   let methodsContent = new Array<string>();
   for(let node of classTag.childNodes()) {
@@ -291,7 +291,7 @@ function extractConstructors(classTag: Element): string {
     }
   }
 
-  return methodsContent.join('\n') + '\n';
+  return methodsContent;
 }
 
 /**
@@ -338,4 +338,47 @@ function buildClass(classes: GIRClass[]): [string, Set<string>] {
   }
 
   return [classesText, imports]
+}
+/**
+ * Builds a representation of the class from the associated XML element.
+ * 
+ * @param {Element} element XML Element representing the class
+ * @returns {GIRClass} Object representing the class, including it's type definition.
+ */
+function extractClass(element: Element): GIRClass {
+  let className = element.attr('name').value();
+  let docstring = getDocstring(element);
+  let parents = new Array<string>();
+  let parentAttr = element.attrs().find((value) => value.name() == "parent");
+  if(parentAttr)
+    parents.push(parentAttr.value());
+
+  let implementsArg = element.find(`{${XMLNS}}implements`);
+  for(let impl of implementsArg)
+    parents.push(impl.attr('name').value());
+
+  let classContent = [`export class ${className} {`];
+  let docstringLines = docstring.split('\n');
+  docstringLines.forEach(value => ` * ${value}`);
+  docstringLines.unshift('/**');
+  docstringLines.push(' */');
+
+  classContent.unshift(...docstringLines);
+  classContent.push(...indent(extractConstructors(element), 1));
+  classContent.push(...indent(extractMethods(element), 1));
+
+  return {
+    name: className,
+    parents: parents,
+    contents: classContent.join('\n') + '\n'
+  };
+}
+
+function extractNamespace(nspace: Element) {
+  let namespaceContent = "";
+  let classes = new Array<any>();
+
+  for(let element of nspace.childNodes()) {
+    let name = element.name();
+  }
 }
