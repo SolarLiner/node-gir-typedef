@@ -389,8 +389,13 @@ function extractClass(element: Element): GIRClass {
     contents: classContent.join("\n") + "\n"
   };
 }
-
-function extractNamespace(nspace: Element): string[] {
+/**
+ * Extract namespace from XML into a type definition
+ * 
+ * @param {Element} nspace Namespace XML Element
+ * @returns {string} Type definition representation of the namespace 
+ */
+function extractNamespace(nspace: Element): string {
   let namespaceContent = new Array<string>();
   let classes = new Array<GIRClass>();
 
@@ -430,5 +435,5 @@ function extractNamespace(nspace: Element): string[] {
     importsContent.push(`let ${imprt} = load('${imprt}', '3.0');`);
   }
   namespaceContent.unshift(...importsContent);
-  return namespaceContent;
+  return namespaceContent.join('\n');
 }
