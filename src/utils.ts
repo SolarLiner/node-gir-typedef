@@ -1,4 +1,4 @@
-export function isReserved(word: string): boolean {
+export function isNameValid(word: string): boolean {
     try {
         eval(`let ${word} = 1`);
         return true;
