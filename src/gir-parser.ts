@@ -173,6 +173,7 @@ function getReturnType(element: Element): ReturnType {
  * @param {ReturnType} returntype Type of the returned value. `null` or `void` if none.
  * @param {number} depth Indentation depth
  * @param {string} [docstring] Function documentation
+ * @param {string[]} [extraTags] Extra tags to pass to the function declaration
  * @returns 
  */
 function buildFunctionString(
@@ -180,7 +181,8 @@ function buildFunctionString(
   args: Parameter[],
   returntype: ReturnType,
   depth: number,
-  docstring?: string
+  docstring?: string,
+  extraTags?: string[]
 ) {
   if (isNameValid(name)) {
     name = "_" + name;
@@ -200,7 +202,9 @@ function buildFunctionString(
 
     return content.join('\n');
   }
-
+  if(extraTags)
+    return `${extraTags.join(' ')} ${name}(${arglist}): ${returntype.type}`;
+  else
   return `${name}(${arglist}): ${returntype.type}`;
 }
 /**
