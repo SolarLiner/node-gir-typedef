@@ -198,8 +198,13 @@ function buildFunctionString(
 
   return `${name}(${arglist}): ${returntype.type}`;
 }
-
-function buildEnumString(element: Element) {
+/**
+ * Builds a type definition string of an enum.
+ * 
+ * @param {Element} element 
+ * @returns {string} String representation of the enum
+ */
+function buildEnumString(element: Element): string {
   let enumName = element.attr('name').value();
   let docstring = getDocstring(element);
   let enumContent = docstring.split('\n').map(line => ` * ${line}`);
