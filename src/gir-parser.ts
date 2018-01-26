@@ -1,5 +1,5 @@
 import { parseXml, Element } from "libxmljs";
-import { isReserved, indent } from './utils';
+import { isNameValid, indent } from './utils';
 
 const GIR_PATHS = ["/usr/share/gir-1.0/*.gir", "/usr/share/*/gir-1.0/*.gir"];
 const XMLNS = "http://www.gtk.org/introspection/core/1.0";
@@ -121,7 +121,7 @@ function getParameters(element: Element) {
             .replace("\n", " ")
             .trim();
 
-          if (isReserved(paramName)) paramName = "_" + paramName;
+          if (isNameValid(paramName)) paramName = "_" + paramName;
 
           if (paramName == "...") {
             paramName = "...other";
@@ -177,7 +177,7 @@ function buildFunctionString(
   depth: number,
   docstring?: string
 ) {
-  if (isReserved(name)) {
+  if (isNameValid(name)) {
     name = "_" + name;
   }
   let arglist = args.map(arg => `${arg.name}: ${arg.type}`).join(", ");
