@@ -435,7 +435,7 @@ function extractNamespace(nspace: Element): string {
       let constantValAttr = element.attrs().find(val => val.name() == "value");
       let constantValue = constantValAttr ? constantValAttr.value() : "null";
       let constantTypeAttr = element.attrs().find(val => val.name() == "type");
-      let constantType = constantTypeAttr? getTSType(constantTypeAttr.value()) : "any";
+      let constantType = constantTypeAttr? TYPEMAP[constantTypeAttr.value()] || "any" : "any";
       constantValue.replace("\\", "\\\\");
       if(!isValueValid(constantValue)) {
         constantValue = `'${constantValue}'`;
