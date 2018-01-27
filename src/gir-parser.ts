@@ -491,7 +491,7 @@ function* girIterator(): IterableIterator<GIFile> {
   }
 }
 
-export function generateGIRFull() {
+export async function generateGIRFull() {
   let path = process.env.GIR_TYPEDEF_DIR || ".";
   path = (path + "/types").replace("//", "/");
 
