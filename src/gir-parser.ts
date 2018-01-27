@@ -349,23 +349,26 @@ function buildClasses(classes: GIRClass[]): [string, Set<string>] {
     );
   }
 
-  while (writtenClasses !== allClasses) {
+  while (writtenClasses.size !== allClasses.size) {
+    console.log(`while (${writtenClasses.size} !== ${allClasses.size})`);
     for (let klass of classes) {
       let skip = false;
-      for (let parent of klass.parents) {
-        if (!parent.includes(".") && !writtenClasses.has(parent)) {
-          skip = true;
-        }
-        if (writtenClasses.has(klass.name)) {
-          skip = true;
-        }
-        if (skip) continue;
+      if(klass.parents) {
+        for (let parent of klass.parents) {
+          if (!parent.includes(".") && !writtenClasses.has(parent)) {
+            skip = true;
+          }
+          if (writtenClasses.has(klass.name)) {
+            skip = true;
+          }
+          if (skip) continue;
 
-        classesText += klass.contents;
-        writtenClasses.add(klass.name);
-        for (let parentClass of parents) {
-          if (parentClass.includes("."))
-            imports.add(parentClass.substring(0, parentClass.indexOf(".")));
+          classesText += klass.contents;
+          writtenClasses.add(klass.name);
+          for (let parentClass of parents) {
+            if (parentClass.includes("."))
+              imports.add(parentClass.substring(0, parentClass.indexOf(".")));
+          }
         }
       }
     }
@@ -398,6 +401,7 @@ function extractClass(element: Element): GIRClass {
   classContent.unshift(...docstringLines);
   classContent.push(...indent(extractConstructors(element), 1));
   classContent.push(...indent(extractMethods(element), 1));
+  classContent.push('}');
 
   return {
     name: className,
