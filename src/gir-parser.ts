@@ -352,19 +352,13 @@ function buildClasses(classes: GIRClass[]): [string, Set<string>] {
   while (writtenClasses.size !== allClasses.size) {
     console.log(`while (${writtenClasses.size} !== ${allClasses.size})`);
     for (let klass of classes) {
-      let skip = false;
+      if(writtenClasses.has(klass.name)) continue;
+
+      classesText += klass.contents + '\n';
+      writtenClasses.add(klass.name);
+      
       if(klass.parents) {
         for (let parent of klass.parents) {
-          if (!parent.includes(".") && !writtenClasses.has(parent)) {
-            skip = true;
-          }
-          if (writtenClasses.has(klass.name)) {
-            skip = true;
-          }
-          if (skip) continue;
-
-          classesText += klass.contents;
-          writtenClasses.add(klass.name);
           for (let parentClass of parents) {
             if (parentClass.includes("."))
               imports.add(parentClass.substring(0, parentClass.indexOf(".")));
