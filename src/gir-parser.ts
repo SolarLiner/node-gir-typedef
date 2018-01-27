@@ -2,6 +2,9 @@ import { parseXml, Element, parseXmlString } from "libxmljs";
 import { isNameValid, indent } from "./utils";
 import "./extensions";
 import { readFile } from "./utils";
+import { Glob, __promisify__ } from 'glob';
+import { basename } from "path";
+import { writeFile } from "fs";
 
 const GIR_PATHS = ["/usr/share/gir-1.0/*.gir", "/usr/share/*/gir-1.0/*.gir"];
 const XMLNS = "http://www.gtk.org/introspection/core/1.0";
@@ -43,6 +46,11 @@ interface GIRClass {
   name: string;
   parents: string[];
   contents: string;
+}
+
+interface GIFile {
+  name: string;
+  path: string;
 }
 
 export var options = {
@@ -439,12 +447,58 @@ function extractNamespace(nspace: Element): string {
   return namespaceContent.join('\n');
 }
 
-async function parseGIR(girPath: string) {
+export async function parseGIR(girPath: string): Promise<string> {
   console.log(`Parsing ${girPath}...`);
-  
+
   let contents = await readFile(girPath);
 
   let root = parseXmlString(contents);
   let nspace = root.find(`{${XMLNS}}namespace`)[0];
   return extractNamespace(nspace);
+}
+
+function* girIterator(): IterableIterator<GIFile> {
+  let girFiles = new Array<string>();
+  for(let girPath in GIR_PATHS) {
+    let glob = __promisify__(girPath)
+      .then(value => {
+        girFiles.push(...value);
+      });
+  }
+
+  for(let girFile in girFiles) {
+    let moduleName = basename(girFile);
+    
+    let dashIndex = moduleName.lastIndexOf('-');
+    if(dashIndex == -1) {
+      console.error("Unversioned file in GIR directory");
+      continue;
+    }
+    moduleName = moduleName.substring(0, dashIndex);
+
+    yield {
+      name: moduleName,
+      path: girFile
+    };
+  }
+}
+
+export function generateGIRFull() {
+  let path = process.env.GIR_TYPEDEF_DIR || ".";
+  path = (path+"/types").replace('//', '/');
+
+  let iterator = girIterator();
+  let value: IteratorResult<GIFile>;
+  do {
+    value = iterator.next();
+    parseGIR(value.value.path)
+      .then(giString => {
+        writeFile(path+`/${value.value.name}.d.ts`, giString, err => {
+          if(err) {
+            console.error(err);
+            console.dir(err);
+          }
+        });
+      });
+  } while (!value.done);
 }
