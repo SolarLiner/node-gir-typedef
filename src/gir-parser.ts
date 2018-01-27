@@ -4,7 +4,6 @@ import "./extensions";
 import { readFile, writeFile } from "./utils";
 import { Glob, __promisify__ } from "glob";
 import { basename } from "path";
-import { writeFile } from "fs";
 
 const GIR_PATHS = ["/usr/share/gir-1.0/*.gir", "/usr/share/*/gir-1.0/*.gir"];
 const XMLNS = "http://www.gtk.org/introspection/core/1.0";
