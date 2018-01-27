@@ -204,6 +204,7 @@ function buildFunctionString(
   if (!isNameValid(name)) {
     name = "_" + name;
   }
+  let content = new Array<string>();
   let arglist = args.map(arg => `${arg.name}: ${arg.type}`).join(", ");
   if (returntype.type == "null") {
     returntype.type = "void";
@@ -211,23 +212,22 @@ function buildFunctionString(
   if (options.documentation) {
     let paramDoc = args.map(arg => ` * @param {${arg.type}} ${arg.doc}`);
     paramDoc.push(` * @returns {${returntype.type}} ${returntype.doc}`);
-    let content = docstring.split("\n").map(line => ` * ${line}`);
+    content = docstring.split("\n").map(line => ` * ${line}`);
     content.unshift("/**");
     content.push(...paramDoc, " */");
-    if (extraTags)
-      content.push(
-        `${extraTags.join(" ")} ${name}(${arglist}): ${returntype.type};`
-      );
-    else content.push(`${name}(${arglist}): ${returntype.type};`);
-
-    content = indent(content, depth);
-
-    return content.join("\n");
   }
+  if(name == "constructor") {
+    content.push(`constructor(${arglist});`);
+  } else if (extraTags) {
+    content.push(
+      `${extraTags.join(" ")} ${name}(${arglist}): ${returntype.type};`
+    );
+  }
+  else content.push(`${name}(${arglist}): ${returntype.type};`);
 
-  if (extraTags)
-    return `${extraTags.join(" ")} ${name}(${arglist}): ${returntype.type}`;
-  else return `${name}(${arglist}): ${returntype.type}`;
+  content = indent(content, depth);
+
+  return content.join("\n");
 }
 /**
  * Builds a type definition string of an enum.
