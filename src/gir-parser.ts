@@ -227,6 +227,7 @@ function buildFunctionString(
 
     return content.join("\n");
   }
+
   if (extraTags)
     return `${extraTags.join(" ")} ${name}(${arglist}): ${returntype.type}`;
   else return `${name}(${arglist}): ${returntype.type}`;
