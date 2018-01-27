@@ -17,6 +17,8 @@
     "typescript": "^2.6.2"
   },
   "scripts": {
+    "build": "tsc",
+    "start": "npm run build && node ./out/index.js",
     "test": "mocha"
   },
   "keywords": [
