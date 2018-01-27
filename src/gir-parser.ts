@@ -236,7 +236,7 @@ function extractEnum(element: Element): GIRClass {
   enumContent.push(" */");
   enumContent.push(`export enum ${enumName} {`);
 
-  let members = element.find(`{${XMLNS}}member`);
+  let members = element.find('xmlns:member', XMLNS);
   for (let member of members) {
     enumName = member.attr("name").value();
     if (enumName.length == 0 || enumName[0].match("[0-9]"))
@@ -379,7 +379,7 @@ function extractClass(element: Element): GIRClass {
   let parentAttr = element.attrs().find(value => value.name() == "parent");
   if (parentAttr) parents.push(parentAttr.value());
 
-  let implementsArg = element.find(`{${XMLNS}}implements`);
+  let implementsArg = element.find('xmlns:implements', XMLNS);
   for (let impl of implementsArg) parents.push(impl.attr("name").value());
 
   let classContent = [`export class ${className} {`];
