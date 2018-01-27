@@ -66,12 +66,13 @@ export var options = {
  */
 function getTSType(typename: string) {
   typename = typename.replace("const ", "");
-  try {
-    return TYPEMAP[typename];
-  } catch {
-    return "any";
+  let returnType = TYPEMAP[typename];
+
+  if(returnType)
+    return returnType;
+  else
+    return typename;
   }
-}
 /**
  * Returns the documentation for the current object
  *
