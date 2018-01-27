@@ -1,5 +1,5 @@
 import { parseXml, Element, parseXmlString } from "libxmljs";
-import { isNameValid, indent } from "./utils";
+import { isNameValid, indent } from './utils';
 import "./extensions";
 import { readFile, writeFile } from "./utils";
 import { Glob, __promisify__ } from "glob";
@@ -246,7 +246,7 @@ function extractEnum(element: Element): GIRClass {
   let members = element.find("xmlns:member", XMLNS);
   for (let member of members) {
     enumName = member.attr("name").value();
-    if (enumName.length == 0 || enumName[0].match("[0-9]"))
+    if (enumName.length == 0 || !isNameValid(enumName))
       enumName = "_" + enumName;
 
     let enumValue = member
