@@ -1,7 +1,7 @@
 import { parseXml, Element, parseXmlString } from "libxmljs";
 import { isNameValid, indent } from "./utils";
 import "./extensions";
-import { readFile } from "./utils";
+import { readFile, writeFile } from "./utils";
 import { Glob, __promisify__ } from "glob";
 import { basename } from "path";
 import { writeFile } from "fs";
@@ -498,20 +498,13 @@ export function generateGIRFull() {
   let iterator = girIterator();
   let value = iterator.next();
   while (!value.done) {
-    parseGIR(value.value.path)
-      .then(giString => {
-        writeFile(path + `/${value.value.name}.d.ts`, giString, err => {
-          if (err) {
-            console.error(
-              "Error writing type definition for",
-              value.value.name
-            );
+      try {
+        let giString = await parseGIR(value.value.path);
+        // writeFile(path + `/${value.value.name}.d.ts`, giString, err => {})
+        await writeFile(path + `/${value.value.name}.d.ts`, giString);
+      } catch(error) {
+        console.error(error);
           }
-        });
-      })
-      .catch(err => {
-        console.error("Error parsing for", value.value.name);
-      });
     value = iterator.next();
   }
 }
