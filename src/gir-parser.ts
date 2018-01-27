@@ -426,7 +426,8 @@ function extractNamespace(nspace: Element): string {
         params,
         returnType,
         0,
-        docstring
+        docstring,
+        ['declare']
       );
       namespaceContent.push(nspaceContent);
     } else if (name == "constant") {
@@ -442,7 +443,7 @@ function extractNamespace(nspace: Element): string {
         constantType = "string";
       }
 
-      namespaceContent.push(`let ${constantName}: ${constantType} = ${constantValue};`);
+      namespaceContent.push(`declare const ${constantName}: ${constantType} = ${constantValue};`);
     }
   }
   let classesContent = buildClasses(classes);
