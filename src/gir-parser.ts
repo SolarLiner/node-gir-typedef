@@ -2,7 +2,7 @@ import { parseXml, Element, parseXmlString } from "libxmljs";
 import { isNameValid, indent } from "./utils";
 import "./extensions";
 import { readFile } from "./utils";
-import { Glob, __promisify__ } from 'glob';
+import { Glob, __promisify__ } from "glob";
 import { basename } from "path";
 import { writeFile } from "fs";
 
@@ -400,9 +400,9 @@ function extractClass(element: Element): GIRClass {
 }
 /**
  * Extract namespace from XML into a type definition
- * 
+ *
  * @param {Element} nspace Namespace XML Element
- * @returns {string} Type definition representation of the namespace 
+ * @returns {string} Type definition representation of the namespace
  */
 function extractNamespace(nspace: Element): string {
   let namespaceContent = new Array<string>();
@@ -437,14 +437,14 @@ function extractNamespace(nspace: Element): string {
     }
   }
   let classesContent = buildClasses(classes);
-  namespaceContent.push(...classesContent[0].split('\n'));
+  namespaceContent.push(...classesContent[0].split("\n"));
 
   let importsContent = new Array<string>();
-  for(let imprt in classesContent[1]) {
+  for (let imprt in classesContent[1]) {
     importsContent.push(`let ${imprt} = load('${imprt}', '3.0');`);
   }
   namespaceContent.unshift(...importsContent);
-  return namespaceContent.join('\n');
+  return namespaceContent.join("\n");
 }
 
 export async function parseGIR(girPath: string): Promise<string> {
@@ -453,23 +453,28 @@ export async function parseGIR(girPath: string): Promise<string> {
   let contents = await readFile(girPath);
 
   let root = parseXmlString(contents);
-  let nspace = root.find(`{${XMLNS}}namespace`)[0];
+
+  let nspaces = root.find(`{${XMLNS}}namespace`);
+
+  if (!nspaces || nspaces.length == 0) {
+    throw Error("Cannot find namespace.");
+  }
+  let nspace = nspaces[0];
   return extractNamespace(nspace);
 }
 
 function* girIterator(): IterableIterator<GIFile> {
   let girFiles = new Array<string>();
-  for(let girPath of GIR_PATHS) {
-    let g = new Glob(girPath, {sync: true});
+  for (let girPath of GIR_PATHS) {
+    let g = new Glob(girPath, { sync: true });
     girFiles.push(...g.found);
   }
 
-  for(let girFile of girFiles) {
+  for (let girFile of girFiles) {
     let moduleName = basename(girFile);
-    
-    let dashIndex = moduleName.lastIndexOf('-');
-    if(dashIndex == -1) {
-      console.error("Unversioned file in GIR directory");
+
+    let dashIndex = moduleName.lastIndexOf("-");
+    if (dashIndex == -1) {
       continue;
     }
     moduleName = moduleName.substring(0, dashIndex);
@@ -483,20 +488,25 @@ function* girIterator(): IterableIterator<GIFile> {
 
 export function generateGIRFull() {
   let path = process.env.GIR_TYPEDEF_DIR || ".";
-  path = (path+"/types").replace('//', '/');
+  path = (path + "/types").replace("//", "/");
 
   let iterator = girIterator();
-  let value: IteratorResult<GIFile>;
-  do {
-    value = iterator.next();
+  let value = iterator.next();
+  while (!value.done) {
     parseGIR(value.value.path)
       .then(giString => {
-        writeFile(path+`/${value.value.name}.d.ts`, giString, err => {
-          if(err) {
-            console.error(err);
-            console.dir(err);
+        writeFile(path + `/${value.value.name}.d.ts`, giString, err => {
+          if (err) {
+            console.error(
+              "Error writing type definition for",
+              value.value.name
+            );
           }
         });
+      })
+      .catch(err => {
+        console.error("Error parsing for", value.value.name);
       });
-  } while (!value.done);
+    value = iterator.next();
+  }
 }
