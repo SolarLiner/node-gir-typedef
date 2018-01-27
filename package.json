@@ -5,7 +5,8 @@
   "main": "./out/index.js",
   "dependencies": {
     "glob": "^7.1.2",
-    "libxmljs": "^0.18.7"
+    "libxmljs": "^0.18.7",
+    "node-gir": "^0.1.5"
   },
   "devDependencies": {
     "@types/chai": "^4.1.2",
