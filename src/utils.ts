@@ -1,8 +1,29 @@
 import { readFileSync, writeFileSync } from "fs";
-
+/**
+ * Checks validity of name by eval'ing it.
+ * 
+ * @export
+ * @param {string} word Word to evaluate
+ * @returns {boolean} Wether it's valid.
+ */
 export function isNameValid(word: string): boolean {
     try {
         eval(`let ${word} = 1`);
+        return true;
+    } catch {
+        return false;
+    }
+}
+/**
+ * Returns wether value is valid.
+ * 
+ * @export
+ * @param {string} value Value to check.
+ * @returns {boolean} Wether the value is valid.
+ */
+export function isValueValid(value: string): boolean {
+    try {
+        eval(`let a = ${value}`);
         return true;
     } catch {
         return false;
