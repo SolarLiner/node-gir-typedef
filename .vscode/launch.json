@@ -13,7 +13,11 @@
             "outFiles": [
                 "${workspaceFolder}/out/**/*.js"
             ],
-            "sourceMaps": true
+            "sourceMaps": true,
+            "skipFiles": [
+                "node_modules/**/*.js",
+                "./out/**/*.js"
+            ]
         }
     ]
 }
