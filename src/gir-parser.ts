@@ -339,14 +339,12 @@ function buildClasses(classes: GIRClass[]): [string, Set<string>] {
   let allClasses = new Set(classes.map(klass => klass.name));
 
   for (let classInfo of classes) {
-    if (classInfo.parents) parents = classInfo.parents;
-    else parents = new Array<string>();
+    if (!classInfo.parents) continue
+    parents = classInfo.parents;
 
     localParents = localParents.union(
       new Set(
-        parents.filter(classParent => {
-          return !classParent.includes(".");
-        })
+        parents.map(parent => parent.substr(0, parent.indexOf('.')))
       )
     );
   }
