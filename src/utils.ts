@@ -20,7 +20,27 @@ export function isNameValid(word: string): boolean {
 export function indent(lines: string[], depth: number) {
     return lines.map(value => Array(depth).join('    '));
 }
+/**
+ * Returns the filename from an absolute or relative path.
+ * 
+ * @export
+ * @param {string} path Absolute/Relative path
+ * @returns {string} Base filename extracted from path
+ */
+export function basename(path: string): string {
+    let lastDirSeparator = path.lastIndexOf('/') || path.lastIndexOf('\\');
+    if(!lastDirSeparator) // Path doesn't contain directory separators, treat it as alreayd a basename
+        return path;
 
+    return path.substr(lastDirSeparator);
+}
+/**
+ * Returns a promise that resolves with the content from the file
+ * 
+ * @export
+ * @param {string} path Absolute or relative path to the file
+ * @returns {Promise<string>} Promise that resolves with content, or rejects with error
+ */
 export function readFile(path: string): Promise<string> {
     return new Promise<string>((resolve, reject) => {
         try {
