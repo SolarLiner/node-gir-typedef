@@ -332,7 +332,7 @@ function buildClasses(classes: GIRClass[]): [string, Set<string>] {
 
   for (let classInfo of classes) {
     if(classInfo.parents)
-    parents = classInfo.parents;
+      parents = classInfo.parents;
     else
       parents = new Array<string>();
     
@@ -503,7 +503,7 @@ export async function generateGIRFull() {
         await writeFile(path + `/${value.value.name}.d.ts`, giString);
       } catch(error) {
         console.error(error);
-          }
+      }
     value = iterator.next();
   }
 }
