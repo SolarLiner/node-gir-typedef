@@ -266,7 +266,7 @@ function extractMethods(classTag: Element): string[] {
   let methodsContent = new Array<string>();
   for (let node of classTag.childNodes()) {
     if (["method", "virtual-method"].contains(node.name())) {
-      let methodName = node.attr("name").value();
+      let methodName = node.attr("name").value(); // TODO: Change snake_case to camelCase
       let docstring = getDocstring(node);
       let params = getParameters(node);
       let returntype = getReturnType(node);
