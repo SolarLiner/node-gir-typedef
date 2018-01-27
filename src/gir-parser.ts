@@ -427,7 +427,7 @@ function extractNamespace(nspace: Element): string {
         returnType,
         0,
         docstring,
-        ['declare']
+        ['declare', 'function']
       );
       namespaceContent.push(nspaceContent);
     } else if (name == "constant") {
@@ -450,10 +450,18 @@ function extractNamespace(nspace: Element): string {
   namespaceContent.push(...classesContent[0].split("\n"));
 
   let importsContent = new Array<string>();
+  if(classesContent[1].size != 0) {
+    importsContent.push('import { load } from "node-gir";\n');
+    importsContent.push('let GObject = load("GObject", "3.0");');
+  }
   for (let imprt in classesContent[1]) {
     importsContent.push(`let ${imprt} = load('${imprt}', '3.0');`);
   }
-  namespaceContent.unshift(...importsContent);
+  namespaceContent.unshift(...importsContent, '\n');
+  namespaceContent = indent(namespaceContent, 1);
+  namespaceContent.unshift(`export namespace ${nspace.attr('name').value()} {`);
+  namespaceContent.push('}');
+  
   return namespaceContent.join("\n");
 }
 
@@ -502,6 +510,9 @@ export async function generateGIR(only?: string[]) {
   path = (path + "/types").replace("//", "/");
   if (!existsSync(path)) mkdirSync(path);
 
+  let nodeGirContent = new Set<string>();
+  nodeGirContent.add('declare function load(nspace: string, version: string);');
+
   let iterator = girIterator(only);
   let value = iterator.next();
   while (!value.done) {
@@ -509,9 +520,12 @@ export async function generateGIR(only?: string[]) {
       let giString = await parseGIR(value.value.path);
       // writeFile(path + `/${value.value.name}.d.ts`, giString, err => {})
       await writeFile(path + `/${value.value.name}.d.ts`, giString);
+      nodeGirContent.add(`export * from "./${value.value.name}";`);
     } catch (error) {
       console.error(error);
     }
     value = iterator.next();
   }
+  
+  await writeFile(`${path}/node-gir.d.ts`, Array.from(nodeGirContent.values()).join('\n'));
 }
