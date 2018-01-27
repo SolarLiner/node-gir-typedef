@@ -1,5 +1,5 @@
 import { parseXml, Element, parseXmlString } from "libxmljs";
-import { isNameValid, indent } from './utils';
+import { isNameValid, indent } from "./utils";
 import "./extensions";
 import { readFile, writeFile } from "./utils";
 import { Glob, __promisify__ } from "glob";
@@ -217,14 +217,13 @@ function buildFunctionString(
     content.unshift("/**");
     content.push(...paramDoc, " */");
   }
-  if(name == "constructor") {
+  if (name == "constructor") {
     content.push(`constructor(${arglist});`);
   } else if (extraTags) {
     content.push(
       `${extraTags.join(" ")} ${name}(${arglist}): ${returntype.type};`
     );
-  }
-  else content.push(`${name}(${arglist}): ${returntype.type};`);
+  } else content.push(`${name}(${arglist}): ${returntype.type};`);
 
   content = indent(content, depth);
 
@@ -340,24 +339,22 @@ function buildClasses(classes: GIRClass[]): [string, Set<string>] {
   let allClasses = new Set(classes.map(klass => klass.name));
 
   for (let classInfo of classes) {
-    if (!classInfo.parents) continue
+    if (!classInfo.parents) continue;
     parents = classInfo.parents;
 
     localParents = localParents.union(
-      new Set(
-        parents.map(parent => parent.substr(0, parent.indexOf('.')))
-      )
+      new Set(parents.map(parent => parent.substr(0, parent.indexOf("."))))
     );
   }
 
   while (writtenClasses.size !== allClasses.size) {
     for (let klass of classes) {
-      if(writtenClasses.has(klass.name)) continue;
+      if (writtenClasses.has(klass.name)) continue;
 
-      classesText += klass.contents + '\n';
+      classesText += klass.contents + "\n";
       writtenClasses.add(klass.name);
-      
-      if(klass.parents) {
+
+      if (klass.parents) {
         for (let parent of klass.parents) {
           for (let parentClass of parents) {
             if (parentClass.includes("."))
@@ -395,7 +392,7 @@ function extractClass(element: Element): GIRClass {
   classContent.unshift(...docstringLines);
   classContent.push(...indent(extractConstructors(element), 1));
   classContent.push(...indent(extractMethods(element), 1));
-  classContent.push('}');
+  classContent.push("}");
 
   return {
     name: className,
@@ -495,8 +492,7 @@ function* girIterator(): IterableIterator<GIFile> {
 export async function generateGIRFull() {
   let path = process.env.GIR_TYPEDEF_DIR || ".";
   path = (path + "/types").replace("//", "/");
-  if(!existsSync(path))
-    mkdirSync(path);
+  if (!existsSync(path)) mkdirSync(path);
 
   let iterator = girIterator();
   let value = iterator.next();
