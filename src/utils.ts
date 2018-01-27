@@ -1,4 +1,4 @@
-import { readFileSync } from "fs";
+import { readFileSync, writeFileSync } from "fs";
 
 export function isNameValid(word: string): boolean {
     try {
@@ -47,6 +47,24 @@ export function readFile(path: string): Promise<string> {
             let contents = readFileSync(path).toString();
             resolve(contents);
         } catch (error) {
+            reject(error);
+        }
+    });
+}
+/**
+ * Async writeFile function
+ * 
+ * @export
+ * @param {string} path Absolute/Relative path to write to
+ * @param {*} data Data to write in the file
+ * @returns Promise that resolves when written, or rejects with an error.
+ */
+export async function writeFile(path: string, data: any) {
+    return new Promise<void>((resolve, reject) => {
+        try {
+            writeFileSync(path, data);
+            resolve();
+        } catch(error) {
             reject(error);
         }
     });
