@@ -1,5 +1,5 @@
 import { parseXml, Element, parseXmlString } from "libxmljs";
-import { isNameValid, indent } from "./utils";
+import { isNameValid, indent, isValueValid } from "./utils";
 import "./extensions";
 import { readFile, writeFile } from "./utils";
 import { Glob, __promisify__ } from "glob";
@@ -434,8 +434,15 @@ function extractNamespace(nspace: Element): string {
       if (constantName[0].match("[0-9]")) constantName = "_" + constantName;
       let constantValAttr = element.attrs().find(val => val.name() == "value");
       let constantValue = constantValAttr ? constantValAttr.value() : "null";
+      let constantTypeAttr = element.attrs().find(val => val.name() == "type");
+      let constantType = constantTypeAttr? getTSType(constantTypeAttr.value()) : "any";
       constantValue.replace("\\", "\\\\");
-      namespaceContent.push(`${constantName} = ${constantValue};`);
+      if(!isValueValid(constantValue)) {
+        constantValue = `'${constantValue}'`;
+        constantType = "string";
+      }
+
+      namespaceContent.push(`let ${constantName}: ${constantType} = ${constantValue};`);
     }
   }
   let classesContent = buildClasses(classes);
