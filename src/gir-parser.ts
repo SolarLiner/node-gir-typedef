@@ -349,7 +349,7 @@ function buildClasses(classes: GIRClass[]): [string, Set<string>] {
   while (writtenClasses !== allClasses) {
     for (let klass of classes) {
       let skip = false;
-      for (let parent of parents) {
+      for (let parent of klass.parents) {
         if (!parent.includes(".") && !writtenClasses.has(parent)) {
           skip = true;
         }
