@@ -139,7 +139,7 @@ function getParameters(element: Element) {
             .replace("\n", " ")
             .trim();
 
-          if (isNameValid(paramName)) paramName = "_" + paramName;
+          if (!isNameValid(paramName)) paramName = "_" + paramName;
 
           if (paramName == "...") {
             paramName = "...other";
@@ -202,7 +202,7 @@ function buildFunctionString(
   docstring?: string,
   extraTags?: string[]
 ) {
-  if (isNameValid(name)) {
+  if (!isNameValid(name)) {
     name = "_" + name;
   }
   let arglist = args.map(arg => `${arg.name}: ${arg.type}`).join(", ");
