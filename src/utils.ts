@@ -41,7 +41,7 @@ export function basename(path: string): string {
  * @param {string} path Absolute or relative path to the file
  * @returns {Promise<string>} Promise that resolves with content, or rejects with error
  */
-export function readFile(path: string): Promise<string> {
+export async function readFile(path: string): Promise<string> {
     return new Promise<string>((resolve, reject) => {
         try {
             let contents = readFileSync(path).toString();
