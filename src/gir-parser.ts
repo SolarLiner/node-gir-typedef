@@ -131,7 +131,10 @@ function getParameters(element: Element) {
       for (let param of node.childNodes()) {
         try {
           let paramName = "";
-          if (param.name() != "instance-parameter")
+          if (param.name() == "instance-parameter")
+            continue;
+          if(!param.attr('name'))
+            continue;
             paramName = param.attr("name").value();
 
           let type = getParameterType(param);
