@@ -473,7 +473,7 @@ export async function parseGIR(girPath: string): Promise<string> {
   return extractNamespace(nspace);
 }
 
-function* girIterator(): IterableIterator<GIFile> {
+function* girIterator(only?: string[]): IterableIterator<GIFile> {
   let girFiles = new Array<string>();
   for (let girPath of GIR_PATHS) {
     let g = new Glob(girPath, { sync: true });
@@ -488,20 +488,20 @@ function* girIterator(): IterableIterator<GIFile> {
       continue;
     }
     moduleName = moduleName.substring(0, dashIndex);
-
-    yield {
-      name: moduleName,
-      path: girFile
-    };
+    if(!only || only.contains(moduleName))
+      yield {
+        name: moduleName,
+        path: girFile
+      };
   }
 }
 
-export async function generateGIRFull() {
+export async function generateGIR(only?: string[]) {
   let path = process.env.GIR_TYPEDEF_DIR || ".";
   path = (path + "/types").replace("//", "/");
   if (!existsSync(path)) mkdirSync(path);
 
-  let iterator = girIterator();
+  let iterator = girIterator(only);
   let value = iterator.next();
   while (!value.done) {
     try {
