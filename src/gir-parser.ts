@@ -455,15 +455,16 @@ export async function parseGIR(girPath: string): Promise<string> {
   console.log(`Parsing ${girPath}...`);
 
   let contents = await readFile(girPath);
-
-  let root = parseXmlString(contents);
-
-  let nspaces = root.find(`{${XMLNS}}namespace`);
-
-  if (!nspaces || nspaces.length == 0) {
-    throw Error("Cannot find namespace.");
+  let document = parseXmlString(contents);
+  let nspace = document.root();
+  if (!nspace) {
+    throw Error("Cannot find repository.");
   }
-  let nspace = nspaces[0];
+  nspace = nspace.get('xmlns:namespace', XMLNS);
+  if(!nspace) {
+    throw Error('Cannot find namespace.');
+  }
+
   return extractNamespace(nspace);
 }
 
