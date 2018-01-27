@@ -10,7 +10,7 @@ const GIR_PATHS = ["/usr/share/gir-1.0/*.gir", "/usr/share/*/gir-1.0/*.gir"];
 const XMLNS = "http://www.gtk.org/introspection/core/1.0";
 
 const TYPEMAP = {
-  gboolean: "bool",
+  gboolean: "boolean",
   gint: "number",
   gint32: "number",
   gint64: "number",
