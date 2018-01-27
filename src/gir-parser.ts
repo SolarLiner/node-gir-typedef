@@ -459,14 +459,12 @@ export async function parseGIR(girPath: string): Promise<string> {
 
 function* girIterator(): IterableIterator<GIFile> {
   let girFiles = new Array<string>();
-  for(let girPath in GIR_PATHS) {
-    let glob = __promisify__(girPath)
-      .then(value => {
-        girFiles.push(...value);
-      });
+  for(let girPath of GIR_PATHS) {
+    let g = new Glob(girPath, {sync: true});
+    girFiles.push(...g.found);
   }
 
-  for(let girFile in girFiles) {
+  for(let girFile of girFiles) {
     let moduleName = basename(girFile);
     
     let dashIndex = moduleName.lastIndexOf('-');
