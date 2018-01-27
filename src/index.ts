@@ -1,3 +1,4 @@
-import { generateGIRFull } from "./gir-parser";
+import { generateGIR } from "./gir-parser";
 
-generateGIRFull();
+// generateGIR();
+generateGIR(['AccountsService', 'Gtk']);
