@@ -4,6 +4,7 @@ import "./extensions";
 import { readFile, writeFile } from "./utils";
 import { Glob, __promisify__ } from "glob";
 import { basename } from "path";
+import { existsSync, mkdirSync } from "fs";
 
 const GIR_PATHS = ["/usr/share/gir-1.0/*.gir", "/usr/share/*/gir-1.0/*.gir"];
 const XMLNS = "http://www.gtk.org/introspection/core/1.0";
@@ -350,7 +351,6 @@ function buildClasses(classes: GIRClass[]): [string, Set<string>] {
   }
 
   while (writtenClasses.size !== allClasses.size) {
-    console.log(`while (${writtenClasses.size} !== ${allClasses.size})`);
     for (let klass of classes) {
       if(writtenClasses.has(klass.name)) continue;
 
@@ -495,6 +495,8 @@ function* girIterator(): IterableIterator<GIFile> {
 export async function generateGIRFull() {
   let path = process.env.GIR_TYPEDEF_DIR || ".";
   path = (path + "/types").replace("//", "/");
+  if(!existsSync(path))
+    mkdirSync(path);
 
   let iterator = girIterator();
   let value = iterator.next();
