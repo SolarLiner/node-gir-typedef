@@ -313,11 +313,11 @@ function extractConstructors(classTag: Element): string[] {
       }
 
       // Also include a static function that does the same thing as the class constructor
-      methodsContent.push(
-        buildFunctionString(methodName, params, returnType, 1, docstring, [
-          "static"
-        ])
-      );
+      // methodsContent.push(
+      //   buildFunctionString(methodName, params, returnType, 1, docstring, [
+      //     "static"
+      //   ])
+      // );
     }
   }
 
