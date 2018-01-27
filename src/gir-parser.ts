@@ -218,7 +218,11 @@ function buildFunctionString(
     let content = docstring.split("\n").map(line => ` * ${line}`);
     content.unshift("/**");
     content.push(...paramDoc, " */");
-    content.push(`${name}(${arglist}): ${returntype};`);
+    if(extraTags)
+      content.push(`${extraTags.join(' ')} ${name}(${arglist}): ${returntype.type};`);
+    else
+      content.push(`${name}(${arglist}): ${returntype.type};`);
+
     content = indent(content, depth);
 
     return content.join("\n");
