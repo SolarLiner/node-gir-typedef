@@ -68,11 +68,9 @@ function getTSType(typename: string) {
   typename = typename.replace("const ", "");
   let returnType = TYPEMAP[typename];
 
-  if(returnType)
-    return returnType;
-  else
-    return typename;
-  }
+  if (returnType) return returnType;
+  else return typename;
+}
 /**
  * Returns the documentation for the current object
  *
@@ -131,11 +129,9 @@ function getParameters(element: Element) {
       for (let param of node.childNodes()) {
         try {
           let paramName = "";
-          if (param.name() == "instance-parameter")
-            continue;
-          if(!param.attr('name'))
-            continue;
-            paramName = param.attr("name").value();
+          if (param.name() == "instance-parameter") continue;
+          if (!param.attr("name")) continue;
+          paramName = param.attr("name").value();
 
           let type = getParameterType(param);
           let doc = getParameterDoc(param)
@@ -218,10 +214,11 @@ function buildFunctionString(
     let content = docstring.split("\n").map(line => ` * ${line}`);
     content.unshift("/**");
     content.push(...paramDoc, " */");
-    if(extraTags)
-      content.push(`${extraTags.join(' ')} ${name}(${arglist}): ${returntype.type};`);
-    else
-      content.push(`${name}(${arglist}): ${returntype.type};`);
+    if (extraTags)
+      content.push(
+        `${extraTags.join(" ")} ${name}(${arglist}): ${returntype.type};`
+      );
+    else content.push(`${name}(${arglist}): ${returntype.type};`);
 
     content = indent(content, depth);
 
@@ -246,7 +243,7 @@ function extractEnum(element: Element): GIRClass {
   enumContent.push(" */");
   enumContent.push(`export enum ${enumName} {`);
 
-  let members = element.find('xmlns:member', XMLNS);
+  let members = element.find("xmlns:member", XMLNS);
   for (let member of members) {
     enumName = member.attr("name").value();
     if (enumName.length == 0 || enumName[0].match("[0-9]"))
@@ -342,11 +339,9 @@ function buildClasses(classes: GIRClass[]): [string, Set<string>] {
   let allClasses = new Set(classes.map(klass => klass.name));
 
   for (let classInfo of classes) {
-    if(classInfo.parents)
-      parents = classInfo.parents;
-    else
-      parents = new Array<string>();
-    
+    if (classInfo.parents) parents = classInfo.parents;
+    else parents = new Array<string>();
+
     localParents = localParents.union(
       new Set(
         parents.filter(classParent => {
@@ -393,7 +388,7 @@ function extractClass(element: Element): GIRClass {
   let parentAttr = element.attrs().find(value => value.name() == "parent");
   if (parentAttr) parents.push(parentAttr.value());
 
-  let implementsArg = element.find('xmlns:implements', XMLNS);
+  let implementsArg = element.find("xmlns:implements", XMLNS);
   for (let impl of implementsArg) parents.push(impl.attr("name").value());
 
   let classContent = [`export class ${className} {`];
@@ -470,9 +465,9 @@ export async function parseGIR(girPath: string): Promise<string> {
   if (!nspace) {
     throw Error("Cannot find repository.");
   }
-  nspace = nspace.get('xmlns:namespace', XMLNS);
-  if(!nspace) {
-    throw Error('Cannot find namespace.');
+  nspace = nspace.get("xmlns:namespace", XMLNS);
+  if (!nspace) {
+    throw Error("Cannot find namespace.");
   }
 
   return extractNamespace(nspace);
@@ -508,13 +503,13 @@ export async function generateGIRFull() {
   let iterator = girIterator();
   let value = iterator.next();
   while (!value.done) {
-      try {
-        let giString = await parseGIR(value.value.path);
-        // writeFile(path + `/${value.value.name}.d.ts`, giString, err => {})
-        await writeFile(path + `/${value.value.name}.d.ts`, giString);
-      } catch(error) {
-        console.error(error);
-      }
+    try {
+      let giString = await parseGIR(value.value.path);
+      // writeFile(path + `/${value.value.name}.d.ts`, giString, err => {})
+      await writeFile(path + `/${value.value.name}.d.ts`, giString);
+    } catch (error) {
+      console.error(error);
+    }
     value = iterator.next();
   }
 }
