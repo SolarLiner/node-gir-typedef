@@ -39,7 +39,7 @@ export function isValueValid(value: string): boolean {
  * @returns Array of indented lines
  */
 export function indent(lines: string[], depth: number) {
-    return lines.map(value => Array(depth+1).join('    ') + value);
+    return lines.map(value => Array(depth+1).join('  ') + value);
 }
 /**
  * Returns the filename from an absolute or relative path.

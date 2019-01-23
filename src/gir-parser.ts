@@ -392,7 +392,7 @@ function extractEnum(element: Element): GIRClass {
       .attr("value")
       .value()
       .replace("\\", "\\\\");
-    enumContent.push(`    ${enumName.toUpperCase()} = '${enumValue}'`);
+    enumContent.push(`  ${enumName.toUpperCase()} = '${enumValue}'`);
   }
   enumContent.push("}");
 
