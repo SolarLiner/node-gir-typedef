@@ -9,24 +9,6 @@ import { existsSync, mkdirSync } from "fs";
 const GIR_PATHS = ["/usr/share/gir-1.0/*.gir", "/usr/share/*/gir-1.0/*.gir"];
 const XMLNS = "http://www.gtk.org/introspection/core/1.0";
 
-const NODEGTK_DEF_TEMPLATE = (
-  classes: GIFile[]
-) => `declare module "node-gtk" {
-  ${classes.map(c => `import {${c.name}} from "./${c.name}`).join("\n  ")}
-  export namespace NodeGTK {
-    export function require<T extends keyof Exports>(
-      ns: T,
-      version?: string
-    ): Exports[T];
-    export function require(ns: string, version?: string): any;
-    export function prependSearchPath(path: string): void;
-    export function prependLibraryPath(path: string): void;
-  }
-  export interface Exports {
-    ${classes.map(c => `${c.name}: ${c.name}`).join("\n    ")}
-  }
-}`;
-
 const TYPEMAP = {
   gboolean: "boolean",
   gint: "number",
@@ -78,31 +60,115 @@ export var options = {
 };
 
 /**
- * Returns the TypeScript type from native GObject type
- *
- * @param {string} typename Native type
- * @returns {string} TypeScript type
+ * Generate TypeScript definitions for GIR.
+ * @param only Only generate types for those GIR
  */
-function getTSType(typename: string) {
-  typename = typename.replace("const ", "");
-  let returnType = TYPEMAP[typename];
+export async function generateGIR(only?: string[]) {
+  let path = process.env.GIR_TYPEDEF_DIR || "./types";
+  if (!existsSync(path)) mkdirSync(path);
 
-  if (returnType) return returnType;
-  else return typename;
-}
-/**
- * Returns the documentation for the current object
- *
- * @param {Element} element Given XMLElement to fetch the documentation of
- * @returns {string} The documentation itself.
- */
-function getDocstring(element: Element) {
-  for (let node of element.childNodes()) {
-    if (node.name() == "doc") return node.text().replace("\\x", "x");
+  const girClasses = Array.from(girIterator(only));
+  for (const value of girClasses) {
+    try {
+      let giString = await parseGIR(value.path);
+      await writeFile(path + `/${value.name}.d.ts`, giString);
+    } catch (error) {
+      console.error(error);
+    }
   }
 
-  return "";
+  await writeFile(
+    `${path}/node-gtk.d.ts`,
+    NodeGTKFromTemplate(new Set(girClasses))
+  );
 }
+
+export async function parseGIR(girPath: string): Promise<string> {
+  console.log(`Parsing ${girPath}...`);
+
+  let contents = await readFile(girPath);
+  let document = parseXmlString(contents);
+  let nspace = document.root();
+  if (!nspace) {
+    throw Error("Cannot find repository.");
+  }
+  nspace = nspace.get("xmlns:namespace", XMLNS);
+  if (!nspace) {
+    throw Error("Cannot find namespace.");
+  }
+
+  return extractNamespace(nspace);
+}
+
+/**
+ * Extract namespace from XML into a type definition
+ *
+ * @param {Element} nspace Namespace XML Element
+ * @returns {string} Type definition representation of the namespace
+ */
+function extractNamespace(nspace: Element): string {
+  let namespaceContent = new Array<string>();
+  let classes = new Array<GIRClass>();
+
+  for (let element of nspace.childNodes()) {
+    let name = element.name();
+    if (["class", "interface"].contains(name))
+      classes.push(extractClass(element));
+    else if (["enumeration", "bitfield"].contains(name))
+      classes.push(extractEnum(element));
+    else if (name == "function") {
+      let funcName = element.attr("name").value();
+      let docstring = getDocstring(element);
+      let params = getParameters(element);
+      let returnType = getReturnType(element);
+      let nspaceContent = buildFunctionString(
+        funcName,
+        params,
+        returnType,
+        0,
+        docstring,
+        ["declare", "function"]
+      );
+      namespaceContent.push(nspaceContent);
+    } else if (name == "constant") {
+      let constantName = element.attr("name").value();
+      if (constantName[0].match("[0-9]")) constantName = "_" + constantName;
+      let constantValAttr = element.attrs().find(val => val.name() == "value");
+      let constantValue = constantValAttr ? constantValAttr.value() : "null";
+      let constantTypeAttr = element.attrs().find(val => val.name() == "type");
+      let constantType = constantTypeAttr
+        ? TYPEMAP[constantTypeAttr.value()] || "any"
+        : "any";
+      constantValue.replace("\\", "\\\\");
+      if (!isValueValid(constantValue)) {
+        constantValue = `'${constantValue}'`;
+        constantType = "string";
+      }
+
+      namespaceContent.push(
+        `declare const ${constantName}: ${constantType} = ${constantValue};`
+      );
+    }
+  }
+  let classesContent = buildClasses(classes);
+  namespaceContent.push(...classesContent[0].split("\n"));
+
+  let importsContent = new Array<string>();
+  if (classesContent[1].size != 0) {
+    importsContent.push('import { load } from "node-gir";\n');
+    importsContent.push('let GObject = load("GObject", "3.0");');
+  }
+  for (let imprt in classesContent[1]) {
+    importsContent.push(`let ${imprt} = load('${imprt}', '3.0');`);
+  }
+  namespaceContent.unshift(...importsContent, "\n");
+  namespaceContent = indent(namespaceContent, 1);
+  namespaceContent.unshift(`export namespace ${nspace.attr("name").value()} {`);
+  namespaceContent.push("}");
+
+  return namespaceContent.join("\n");
+}
+
 /**
  * Returns native parameter type for a given object
  *
@@ -118,22 +184,35 @@ function getParameterType(element: Element) {
 
   return "";
 }
+
 /**
- * Retuns documentation for the chosen parameter
+ * Returns the TypeScript type from native GObject type
  *
- * @param {Element} element XML Element representing the parameter
- * @returns {string} documentation for the parameter
+ * @param {string} typename Native type
+ * @returns {string} TypeScript type
  */
-function getParameterDoc(element: Element) {
-  for (let node of element.childNodes()) {
-    if (node.name() == "doc")
-      return node
-        .text()
-        .replace("\\x", "x")
-        .replace("\n", " ")
-        .trim();
-  }
+function getTSType(typename: string) {
+  typename = typename.replace("const ", "");
+  let returnType = TYPEMAP[typename];
+
+  if (returnType) return returnType;
+  else return typename;
 }
+
+/**
+ * Returns the documentation for the current object
+ *
+ * @param {Element} element Given XMLElement to fetch the documentation of
+ * @returns {string} The documentation itself.
+ */
+function getDocstring(element: Element) {
+  for (let node of element.childNodes()) {
+    if (node.name() == "doc") return node.text().replace("\\x", "x");
+  }
+
+  return "";
+}
+
 /**
  * Returns parameters of an object
  *
@@ -175,6 +254,24 @@ function getParameters(element: Element) {
 
   return params;
 }
+
+/**
+ * Retuns documentation for the chosen parameter
+ *
+ * @param {Element} element XML Element representing the parameter
+ * @returns {string} documentation for the parameter
+ */
+function getParameterDoc(element: Element) {
+  for (let node of element.childNodes()) {
+    if (node.name() == "doc")
+      return node
+        .text()
+        .replace("\\x", "x")
+        .replace("\n", " ")
+        .trim();
+  }
+}
+
 /**
  * Returns the return type of the object
  *
@@ -199,6 +296,30 @@ function getReturnType(element: Element): ReturnType {
     doc: null,
     type: "null"
   };
+}
+
+/**
+ * Extract methods from class
+ *
+ * @param {Element} classTag XML element representing the class.
+ * @returns {string[]} String type definition representation of the methods.
+ */
+function extractMethods(classTag: Element): string[] {
+  let methodsContent = new Array<string>();
+  for (let node of classTag.childNodes()) {
+    if (["method", "virtual-method"].contains(node.name())) {
+      let methodName = node.attr("name").value(); // TODO: Change snake_case to camelCase
+      let docstring = getDocstring(node);
+      let params = getParameters(node);
+      let returntype = getReturnType(node);
+
+      methodsContent.push(
+        buildFunctionString(methodName, params, returntype, 1, docstring)
+      );
+    }
+  }
+
+  return methodsContent;
 }
 
 /**
@@ -280,29 +401,6 @@ function extractEnum(element: Element): GIRClass {
     parents: null,
     contents: enumContent.join("\n")
   };
-}
-/**
- * Extract methods from class
- *
- * @param {Element} classTag XML element representing the class.
- * @returns {string[]} String type definition representation of the methods.
- */
-function extractMethods(classTag: Element): string[] {
-  let methodsContent = new Array<string>();
-  for (let node of classTag.childNodes()) {
-    if (["method", "virtual-method"].contains(node.name())) {
-      let methodName = node.attr("name").value(); // TODO: Change snake_case to camelCase
-      let docstring = getDocstring(node);
-      let params = getParameters(node);
-      let returntype = getReturnType(node);
-
-      methodsContent.push(
-        buildFunctionString(methodName, params, returntype, 1, docstring)
-      );
-    }
-  }
-
-  return methodsContent;
 }
 
 /**
@@ -418,91 +516,6 @@ function extractClass(element: Element): GIRClass {
     contents: classContent.join("\n") + "\n"
   };
 }
-/**
- * Extract namespace from XML into a type definition
- *
- * @param {Element} nspace Namespace XML Element
- * @returns {string} Type definition representation of the namespace
- */
-function extractNamespace(nspace: Element): string {
-  let namespaceContent = new Array<string>();
-  let classes = new Array<GIRClass>();
-
-  for (let element of nspace.childNodes()) {
-    let name = element.name();
-    if (["class", "interface"].contains(name))
-      classes.push(extractClass(element));
-    else if (["enumeration", "bitfield"].contains(name))
-      classes.push(extractEnum(element));
-    else if (name == "function") {
-      let funcName = element.attr("name").value();
-      let docstring = getDocstring(element);
-      let params = getParameters(element);
-      let returnType = getReturnType(element);
-      let nspaceContent = buildFunctionString(
-        funcName,
-        params,
-        returnType,
-        0,
-        docstring,
-        ["declare", "function"]
-      );
-      namespaceContent.push(nspaceContent);
-    } else if (name == "constant") {
-      let constantName = element.attr("name").value();
-      if (constantName[0].match("[0-9]")) constantName = "_" + constantName;
-      let constantValAttr = element.attrs().find(val => val.name() == "value");
-      let constantValue = constantValAttr ? constantValAttr.value() : "null";
-      let constantTypeAttr = element.attrs().find(val => val.name() == "type");
-      let constantType = constantTypeAttr
-        ? TYPEMAP[constantTypeAttr.value()] || "any"
-        : "any";
-      constantValue.replace("\\", "\\\\");
-      if (!isValueValid(constantValue)) {
-        constantValue = `'${constantValue}'`;
-        constantType = "string";
-      }
-
-      namespaceContent.push(
-        `declare const ${constantName}: ${constantType} = ${constantValue};`
-      );
-    }
-  }
-  let classesContent = buildClasses(classes);
-  namespaceContent.push(...classesContent[0].split("\n"));
-
-  let importsContent = new Array<string>();
-  if (classesContent[1].size != 0) {
-    importsContent.push('import { load } from "node-gir";\n');
-    importsContent.push('let GObject = load("GObject", "3.0");');
-  }
-  for (let imprt in classesContent[1]) {
-    importsContent.push(`let ${imprt} = load('${imprt}', '3.0');`);
-  }
-  namespaceContent.unshift(...importsContent, "\n");
-  namespaceContent = indent(namespaceContent, 1);
-  namespaceContent.unshift(`export namespace ${nspace.attr("name").value()} {`);
-  namespaceContent.push("}");
-
-  return namespaceContent.join("\n");
-}
-
-export async function parseGIR(girPath: string): Promise<string> {
-  console.log(`Parsing ${girPath}...`);
-
-  let contents = await readFile(girPath);
-  let document = parseXmlString(contents);
-  let nspace = document.root();
-  if (!nspace) {
-    throw Error("Cannot find repository.");
-  }
-  nspace = nspace.get("xmlns:namespace", XMLNS);
-  if (!nspace) {
-    throw Error("Cannot find namespace.");
-  }
-
-  return extractNamespace(nspace);
-}
 
 function* girIterator(only?: string[]): IterableIterator<GIFile> {
   let girFiles = new Array<string>();
@@ -527,22 +540,22 @@ function* girIterator(only?: string[]): IterableIterator<GIFile> {
   }
 }
 
-export async function generateGIR(only?: string[]) {
-  let path = process.env.GIR_TYPEDEF_DIR || "./types";
-  if (!existsSync(path)) mkdirSync(path);
+function NodeGTKFromTemplate(classes: Set<GIFile>) {
+  const classArray = Array.from(classes.values());
 
-  const girClasses = Array.from(girIterator(only));
-  for (const value of girClasses) {
-    try {
-      let giString = await parseGIR(value.path);
-      await writeFile(path + `/${value.name}.d.ts`, giString);
-    } catch (error) {
-      console.error(error);
+  return `declare module "node-gtk" {
+    ${classArray.map(c => `import {${c.name}} from "./${c.name}`).join("\n  ")}
+    export namespace NodeGTK {
+      export function require<T extends keyof Exports>(
+        ns: T,
+        version?: string
+      ): Exports[T];
+      export function require(ns: string, version?: string): any;
+      export function prependSearchPath(path: string): void;
+      export function prependLibraryPath(path: string): void;
     }
-  }
-
-  await writeFile(
-    `${path}/node-gtk.d.ts`,
-    NODEGTK_DEF_TEMPLATE(girClasses)
-  );
+    export interface Exports {
+      ${classArray.map(c => `${c.name}: ${c.name}`).join("\n    ")}
+    }
+  }`;
 }
