@@ -9,6 +9,24 @@ import { existsSync, mkdirSync } from "fs";
 const GIR_PATHS = ["/usr/share/gir-1.0/*.gir", "/usr/share/*/gir-1.0/*.gir"];
 const XMLNS = "http://www.gtk.org/introspection/core/1.0";
 
+const NODEGTK_DEF_TEMPLATE = (
+  classes: GIFile[]
+) => `declare module "node-gtk" {
+  ${classes.map(c => `import {${c.name}} from "./${c.name}`).join("\n  ")}
+  export namespace NodeGTK {
+    export function require<T extends keyof Exports>(
+      ns: T,
+      version?: string
+    ): Exports[T];
+    export function require(ns: string, version?: string): any;
+    export function prependSearchPath(path: string): void;
+    export function prependLibraryPath(path: string): void;
+  }
+  export interface Exports {
+    ${classes.map(c => `${c.name}: ${c.name}`).join("\n    ")}
+  }
+}`;
+
 const TYPEMAP = {
   gboolean: "boolean",
   gint: "number",
@@ -142,7 +160,7 @@ function getParameters(element: Element) {
           if (!isNameValid(paramName)) paramName = "_" + paramName;
 
           if (paramName == "...") {
-            paramName = "...other";
+            paramName = "...rest";
           }
 
           if (params.filter(val => val.name == paramName).length == 0) {
@@ -427,7 +445,7 @@ function extractNamespace(nspace: Element): string {
         returnType,
         0,
         docstring,
-        ['declare', 'function']
+        ["declare", "function"]
       );
       namespaceContent.push(nspaceContent);
     } else if (name == "constant") {
@@ -436,32 +454,36 @@ function extractNamespace(nspace: Element): string {
       let constantValAttr = element.attrs().find(val => val.name() == "value");
       let constantValue = constantValAttr ? constantValAttr.value() : "null";
       let constantTypeAttr = element.attrs().find(val => val.name() == "type");
-      let constantType = constantTypeAttr? TYPEMAP[constantTypeAttr.value()] || "any" : "any";
+      let constantType = constantTypeAttr
+        ? TYPEMAP[constantTypeAttr.value()] || "any"
+        : "any";
       constantValue.replace("\\", "\\\\");
-      if(!isValueValid(constantValue)) {
+      if (!isValueValid(constantValue)) {
         constantValue = `'${constantValue}'`;
         constantType = "string";
       }
 
-      namespaceContent.push(`declare const ${constantName}: ${constantType} = ${constantValue};`);
+      namespaceContent.push(
+        `declare const ${constantName}: ${constantType} = ${constantValue};`
+      );
     }
   }
   let classesContent = buildClasses(classes);
   namespaceContent.push(...classesContent[0].split("\n"));
 
   let importsContent = new Array<string>();
-  if(classesContent[1].size != 0) {
+  if (classesContent[1].size != 0) {
     importsContent.push('import { load } from "node-gir";\n');
     importsContent.push('let GObject = load("GObject", "3.0");');
   }
   for (let imprt in classesContent[1]) {
     importsContent.push(`let ${imprt} = load('${imprt}', '3.0');`);
   }
-  namespaceContent.unshift(...importsContent, '\n');
+  namespaceContent.unshift(...importsContent, "\n");
   namespaceContent = indent(namespaceContent, 1);
-  namespaceContent.unshift(`export namespace ${nspace.attr('name').value()} {`);
-  namespaceContent.push('}');
-  
+  namespaceContent.unshift(`export namespace ${nspace.attr("name").value()} {`);
+  namespaceContent.push("}");
+
   return namespaceContent.join("\n");
 }
 
@@ -497,7 +519,7 @@ function* girIterator(only?: string[]): IterableIterator<GIFile> {
       continue;
     }
     moduleName = moduleName.substring(0, dashIndex);
-    if(!only || only.contains(moduleName))
+    if (!only || only.contains(moduleName))
       yield {
         name: moduleName,
         path: girFile
@@ -506,26 +528,21 @@ function* girIterator(only?: string[]): IterableIterator<GIFile> {
 }
 
 export async function generateGIR(only?: string[]) {
-  let path = process.env.GIR_TYPEDEF_DIR || ".";
-  path = (path + "/types").replace("//", "/");
+  let path = process.env.GIR_TYPEDEF_DIR || "./types";
   if (!existsSync(path)) mkdirSync(path);
 
-  let nodeGirContent = new Set<string>();
-  nodeGirContent.add('declare function load(nspace: string, version: string);');
-
-  let iterator = girIterator(only);
-  let value = iterator.next();
-  while (!value.done) {
+  const girClasses = Array.from(girIterator(only));
+  for (const value of girClasses) {
     try {
-      let giString = await parseGIR(value.value.path);
-      // writeFile(path + `/${value.value.name}.d.ts`, giString, err => {})
-      await writeFile(path + `/${value.value.name}.d.ts`, giString);
-      nodeGirContent.add(`export * from "./${value.value.name}";`);
+      let giString = await parseGIR(value.path);
+      await writeFile(path + `/${value.name}.d.ts`, giString);
     } catch (error) {
       console.error(error);
     }
-    value = iterator.next();
   }
-  
-  await writeFile(`${path}/node-gir.d.ts`, Array.from(nodeGirContent.values()).join('\n'));
+
+  await writeFile(
+    `${path}/node-gtk.d.ts`,
+    NODEGTK_DEF_TEMPLATE(girClasses)
+  );
 }
