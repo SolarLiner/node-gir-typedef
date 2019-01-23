@@ -110,7 +110,7 @@ function extractNamespace(nspace: Element): string {
   let namespaceContent = new Array<string>();
   let classes = new Array<GIRClass>();
 
-  for (let element of nspace.childNodes()) {
+  for (let element of nspace.childNodes() as Element[]) {
     let name = element.name();
     if (["class", "interface"].contains(name))
       classes.push(extractClass(element));
@@ -176,7 +176,7 @@ function extractNamespace(nspace: Element): string {
  * @returns {string} the native type the object is made up of
  */
 function getParameterType(element: Element) {
-  for (let node of element.childNodes()) {
+  for (let node of element.childNodes() as Element[]) {
     if (node.name() == "type") {
       return getTSType(node.attr("name").value());
     }
@@ -206,7 +206,7 @@ function getTSType(typename: string) {
  * @returns {string} The documentation itself.
  */
 function getDocstring(element: Element) {
-  for (let node of element.childNodes()) {
+  for (let node of element.childNodes() as Element[]) {
     if (node.name() == "doc") return node.text().replace("\\x", "x");
   }
 
@@ -222,9 +222,9 @@ function getDocstring(element: Element) {
 function getParameters(element: Element) {
   const params = new Array<Parameter>();
 
-  for (let node of element.childNodes()) {
+  for (let node of element.childNodes() as Element[]) {
     if (node.name() == "parameters") {
-      for (let param of node.childNodes()) {
+      for (let param of node.childNodes() as Element[]) {
         try {
           let paramName = "";
           if (param.name() == "instance-parameter") continue;
@@ -262,7 +262,7 @@ function getParameters(element: Element) {
  * @returns {string} documentation for the parameter
  */
 function getParameterDoc(element: Element) {
-  for (let node of element.childNodes()) {
+  for (let node of element.childNodes() as Element[]) {
     if (node.name() == "doc")
       return node
         .text()
@@ -279,10 +279,10 @@ function getParameterDoc(element: Element) {
  * @returns {ReturnType} Return type of the object
  */
 function getReturnType(element: Element): ReturnType {
-  for (let node of element.childNodes()) {
+  for (let node of element.childNodes() as Element[]) {
     if (node.name() == "return-value") {
       let doc = getDocstring(node).replace("\n", " ");
-      for (let subnode of node.childNodes()) {
+      for (let subnode of node.childNodes() as Element[]) {
         if (subnode.name() == "type")
           return {
             doc: doc,
@@ -306,7 +306,7 @@ function getReturnType(element: Element): ReturnType {
  */
 function extractMethods(classTag: Element): string[] {
   let methodsContent = new Array<string>();
-  for (let node of classTag.childNodes()) {
+  for (let node of classTag.childNodes() as Element[]) {
     if (["method", "virtual-method"].contains(node.name())) {
       let methodName = node.attr("name").value(); // TODO: Change snake_case to camelCase
       let docstring = getDocstring(node);
@@ -382,7 +382,7 @@ function extractEnum(element: Element): GIRClass {
   enumContent.push(" */");
   enumContent.push(`export enum ${enumName} {`);
 
-  let members = element.find("xmlns:member", XMLNS);
+  let members = element.find("xmlns:member", XMLNS) as Element[];
   for (let member of members) {
     enumName = member.attr("name").value();
     if (enumName.length == 0 || !isNameValid(enumName))
@@ -412,7 +412,7 @@ function extractEnum(element: Element): GIRClass {
 function extractConstructors(classTag: Element): string[] {
   let className = classTag.attr("name").value();
   let methodsContent = new Array<string>();
-  for (let node of classTag.childNodes()) {
+  for (let node of classTag.childNodes() as Element[]) {
     if (node.name() == "constructor") {
       let methodName = node.attr("name").value();
       let docstring = getDocstring(node);
@@ -483,6 +483,7 @@ function buildClasses(classes: GIRClass[]): [string, Set<string>] {
 
   return [classesText, imports];
 }
+
 /**
  * Builds a representation of the class from the associated XML element.
  *
@@ -496,7 +497,7 @@ function extractClass(element: Element): GIRClass {
   let parentAttr = element.attrs().find(value => value.name() == "parent");
   if (parentAttr) parents.push(parentAttr.value());
 
-  let implementsArg = element.find("xmlns:implements", XMLNS);
+  let implementsArg = element.find("xmlns:implements", XMLNS) as Element[];
   for (let impl of implementsArg) parents.push(impl.attr("name").value());
 
   let classContent = [`export class ${className} {`];
