@@ -422,7 +422,7 @@ function extractConstructors(classTag: Element): string[] {
         type: methodName
       };
 
-      if ((methodName = "new")) {
+      if (methodName == "new") {
         methodsContent.push(
           buildFunctionString("constructor", params, returnType, 1, docstring)
         );
